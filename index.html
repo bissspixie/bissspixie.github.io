@@ -576,7 +576,7 @@
     m2Timer.style.transition = 'none';
     m2Timer.style.width = '100%';
     requestAnimationFrame(()=>{
-      m2Timer.style.transition = 'width 3s linear';
+      m2Timer.style.transition = 'width 1.5s linear';
       m2Timer.style.width = '0%';
     });
 
@@ -593,7 +593,7 @@
       m2InputWrap.style.display = 'block';
       m2Input.value = '';
       m2Input.focus();
-    }, 3000);
+    }, 1500);
   });
 
   m2Submit.addEventListener('click', ()=>{
@@ -693,7 +693,7 @@
       patternAnswer.forEach(i=> patternTiles[i].classList.remove('flash'));
       pickingEnabled = true;
       btnShowPattern.textContent = "Now click the 4 tiles you remember";
-    }, 2000);
+    }, 1000);
   });
 
   btnSubmitPattern.addEventListener('click', ()=>{
