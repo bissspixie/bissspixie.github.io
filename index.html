@@ -180,6 +180,8 @@
   }
   @keyframes popin{from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:translateX(0);}}
   @keyframes popout{to{opacity:0;transform:translateX(30px);}}
+  .notif.notif-intense{border-left-color:var(--signal-red);box-shadow:0 8px 24px rgba(232,92,74,.35);animation:popin .2s ease, shake .3s ease .2s, popout .3s ease 2.2s forwards;}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
   .notif b{display:block;color:var(--forest);font-size:13px;}
 
   /* results */
@@ -294,15 +296,15 @@
       <p class="eyebrow">Step 03 · Module 2 — Live Exhibition Feature</p>
       <h2>Dual-Task Interference Test</h2>
       <div class="instructions" id="m2-instructions">
-        <b>Round A — Focused Memory:</b> a 5-digit number will appear for 3 seconds. Memorize it, then type it back exactly. No distractions this round.
+        <b>Round A — Focused Memory:</b> a 7-digit number will appear for 3 seconds. Memorize it, then type it back exactly. No distractions this round.
       </div>
 
       <div class="timer-bar-track"><div class="timer-bar-fill" id="m2-timer"></div></div>
-      <div class="digit-display" id="m2-digits">— — — — —</div>
+      <div class="digit-display" id="m2-digits">— — — — — — —</div>
 
       <div id="m2-input-wrap" style="display:none;">
         <label for="m2-input">Type the sequence you saw</label>
-        <input type="text" class="mono" id="m2-input" maxlength="5" placeholder="00000">
+        <input type="text" class="mono" id="m2-input" maxlength="7" placeholder="0000000">
         <div class="btn-row"><button class="btn" id="m2-submit">Submit Answer</button></div>
       </div>
 
@@ -319,7 +321,7 @@
       <p class="eyebrow">Step 04 · Module 3</p>
       <h2>Short-Term Pattern Recall</h2>
       <div class="instructions">
-        <b>Instructions:</b> watch the grid — 4 tiles will flash teal for 2 seconds. Once they turn back to normal, click the 4 tiles you remember. Then submit to see your accuracy.
+        <b>Instructions:</b> watch the grid — 5 tiles will flash teal for 2 seconds. Once they turn back to normal, click the 5 tiles you remember. Then submit to see your accuracy.
       </div>
 
       <div class="pattern-grid" id="pattern-grid"></div>
@@ -519,8 +521,8 @@
   function resetModule2(){
     m2Round = 'A';
     state.m2AccuracyA = null; state.m2AccuracyB = null; state.distractionDrop = null;
-    m2Instructions.innerHTML = "<b>Round A — Focused Memory:</b> a 5-digit number will appear for 3 seconds. Memorize it, then type it back exactly. No distractions this round.";
-    m2Digits.textContent = "— — — — —";
+    m2Instructions.innerHTML = "<b>Round A — Focused Memory:</b> a 7-digit number will appear for 3 seconds. Memorize it, then type it back exactly. No distractions this round.";
+    m2Digits.textContent = "— — — — — — —";
     m2Timer.style.transition = 'none';
     m2Timer.style.width = '100%';
     m2InputWrap.style.display = 'none';
@@ -532,21 +534,21 @@
 
   function genDigits(){
     let s = "";
-    for(let i=0;i<5;i++) s += Math.floor(Math.random()*10);
+    for(let i=0;i<7;i++) s += Math.floor(Math.random()*10);
     return s;
   }
 
-  function playBeep(){
+  function playBeep(intense){
     try{
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'square';
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      osc.frequency.value = intense ? 1180 : 880;
+      gain.gain.setValueAtTime(intense ? 0.11 : 0.06, ctx.currentTime);
       osc.connect(gain).connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.15);
+      osc.stop(ctx.currentTime + (intense ? 0.22 : 0.15));
       osc.onended = ()=> ctx.close();
     }catch(e){ /* audio not available, fail silently */ }
   }
@@ -559,13 +561,14 @@
     {title:"Missed Call", body:"You have 1 missed call."}
   ];
 
-  function spawnNotification(){
+  function spawnNotification(intense){
     const msg = NOTIF_MESSAGES[Math.floor(Math.random()*NOTIF_MESSAGES.length)];
     const el = document.createElement('div');
-    el.className = 'notif';
+    el.className = 'notif' + (intense ? ' notif-intense' : '');
     el.innerHTML = `<b>${msg.title}</b>${msg.body}`;
     distractionLayer.appendChild(el);
-    playBeep();
+    playBeep(intense);
+    if(intense) playBeep(intense); // double beep for extra intensity in Round B
     setTimeout(()=> el.remove(), 2600);
   }
 
@@ -573,41 +576,48 @@
     m2CurrentSequence = genDigits();
     m2StartRow.style.display = 'none';
     m2Digits.textContent = m2CurrentSequence.split('').join(' ');
+
+    // Round B shows the digits for less time than Round A
+    const displayMs = m2Round === 'B' ? 900 : 1500;
+
     m2Timer.style.transition = 'none';
     m2Timer.style.width = '100%';
     requestAnimationFrame(()=>{
-      m2Timer.style.transition = 'width 1.5s linear';
+      m2Timer.style.transition = `width ${displayMs/1000}s linear`;
       m2Timer.style.width = '0%';
     });
 
     if(m2Round === 'B'){
-      // fire distraction popups + sounds through the 3s display window
-      spawnNotification();
-      m2DistractionTimers.push(setTimeout(spawnNotification, 800));
-      m2DistractionTimers.push(setTimeout(spawnNotification, 1700));
-      m2DistractionTimers.push(setTimeout(spawnNotification, 2500));
+      // fire more frequent, louder/harsher distraction popups + sounds
+      spawnNotification(true);
+      m2DistractionTimers.push(setTimeout(()=>spawnNotification(true), 350));
+      m2DistractionTimers.push(setTimeout(()=>spawnNotification(true), 700));
+      m2DistractionTimers.push(setTimeout(()=>spawnNotification(true), 1100));
+      m2DistractionTimers.push(setTimeout(()=>spawnNotification(true), 1500));
+      m2DistractionTimers.push(setTimeout(()=>spawnNotification(true), 2000));
+      m2DistractionTimers.push(setTimeout(()=>spawnNotification(true), 2500));
     }
 
     setTimeout(()=>{
-      m2Digits.textContent = "— — — — —";
+      m2Digits.textContent = "— — — — — — —";
       m2InputWrap.style.display = 'block';
       m2Input.value = '';
       m2Input.focus();
-    }, 1500);
+    }, displayMs);
   });
 
   m2Submit.addEventListener('click', ()=>{
     const answer = m2Input.value.trim();
     let correct = 0;
-    for(let i=0;i<5;i++){ if(answer[i] === m2CurrentSequence[i]) correct++; }
-    const accuracy = Math.round((correct/5)*100);
+    for(let i=0;i<7;i++){ if(answer[i] === m2CurrentSequence[i]) correct++; }
+    const accuracy = Math.round((correct/7)*100);
 
     if(m2Round === 'A'){
       state.m2AccuracyA = accuracy;
-      m2Result.innerHTML = `Round A accuracy: <b>${accuracy}%</b> (${correct}/5 digits correct).`;
+      m2Result.innerHTML = `Round A accuracy: <b>${accuracy}%</b> (${correct}/7 digits correct).`;
       m2InputWrap.style.display = 'none';
       m2Round = 'B';
-      m2Instructions.innerHTML = "<b>Round B — Distracted Memory:</b> another 5-digit number will appear for 3 seconds — but this time notification pop-ups and alert sounds will fire while you're trying to memorize it. Do your best!";
+      m2Instructions.innerHTML = "<b>Round B — Distracted Memory:</b> another 7-digit number will appear for a shorter time — and this time notification pop-ups and alert sounds will fire harder while you're trying to memorize it. Do your best!";
       m2StartRow.style.display = 'flex';
       m2StartBtn.textContent = "Start Round B (with distractions)";
       m2StartBtn.className = "btn amber";
@@ -616,7 +626,7 @@
       const dropRaw = state.m2AccuracyA > 0
         ? ((state.m2AccuracyA - state.m2AccuracyB) / state.m2AccuracyA) * 100
         : 0;
-      state.distractionDrop = Math.max(0, Math.round(dropRaw));
+      state.distractionDrop = Math.round(dropRaw);
       m2Result.innerHTML = `Round A: <b>${state.m2AccuracyA}%</b> · Round B: <b>${state.m2AccuracyB}%</b><br>
         Distraction Degradation: <b>${state.distractionDrop}%</b> performance drop.`;
       btnToModule3.style.display = 'inline-flex';
@@ -670,11 +680,11 @@
       userPicks = userPicks.filter(p=>p!==index);
       tile.classList.remove('picked');
     } else {
-      if(userPicks.length >= 4) return;
+      if(userPicks.length >= 5) return;
       userPicks.push(index);
       tile.classList.add('picked');
     }
-    btnSubmitPattern.disabled = userPicks.length !== 4;
+    btnSubmitPattern.disabled = userPicks.length !== 5;
   }
 
   btnShowPattern.addEventListener('click', ()=>{
@@ -682,7 +692,7 @@
     // choose 4 unique random tiles
     const pool = [0,1,2,3,4,5,6,7,8];
     patternAnswer = [];
-    for(let i=0;i<4;i++){
+    for(let i=0;i<5;i++){
       const idx = Math.floor(Math.random()*pool.length);
       patternAnswer.push(pool.splice(idx,1)[0]);
     }
@@ -692,7 +702,7 @@
     setTimeout(()=>{
       patternAnswer.forEach(i=> patternTiles[i].classList.remove('flash'));
       pickingEnabled = true;
-      btnShowPattern.textContent = "Now click the 4 tiles you remember";
+      btnShowPattern.textContent = "Now click the 5 tiles you remember";
     }, 1000);
   });
 
@@ -706,9 +716,9 @@
       else if(wasPicked && !wasAnswer){ tile.classList.add('wrong'); }
       else if(!wasPicked && wasAnswer){ tile.classList.add('correct'); }
     });
-    const score = Math.round((correctCount/4)*100);
+    const score = Math.round((correctCount/5)*100);
     state.memoryScore = score;
-    patternResult.innerHTML = `You correctly recalled <b>${correctCount} of 4</b> tiles — accuracy score: <b>${score}%</b>.`;
+    patternResult.innerHTML = `You correctly recalled <b>${correctCount} of 5</b> tiles — accuracy score: <b>${score}%</b>.`;
     btnSubmitPattern.disabled = true;
     btnToResults.style.display = 'inline-flex';
   });
@@ -729,8 +739,8 @@
   const SCREEN_LABEL = { "<2":"under 2 hrs/day", "2-4":"2–4 hrs/day", "4+":"4+ hrs/day" };
 
   function compareBar(label, youVal, avgVal, maxVal, unit){
-    const youPct = Math.min(100, (youVal/maxVal)*100);
-    const avgPct = Math.min(100, (avgVal/maxVal)*100);
+    const youPct = Math.max(0, Math.min(100, (youVal/maxVal)*100));
+    const avgPct = Math.max(0, Math.min(100, (avgVal/maxVal)*100));
     return `
       <div class="compare-row">
         <div class="compare-label"><span>${label}</span><span>You: ${youVal}${unit} · Group avg: ${avgVal}${unit}</span></div>
