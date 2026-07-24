@@ -321,7 +321,7 @@
       <p class="eyebrow">Step 04 · Module 3</p>
       <h2>Short-Term Pattern Recall</h2>
       <div class="instructions">
-        <b>Instructions:</b> watch the grid — 5 tiles will flash teal for 2 seconds. Once they turn back to normal, click the 5 tiles you remember. Then submit to see your accuracy.
+        <b>Instructions:</b> watch the grid — 5 tiles will flash teal for 0.5 seconds. Once they turn back to normal, click the 5 tiles you remember. Then submit to see your accuracy.
       </div>
 
       <div class="pattern-grid" id="pattern-grid"></div>
@@ -578,7 +578,7 @@
     m2Digits.textContent = m2CurrentSequence.split('').join(' ');
 
     // Digits display for the same duration in both rounds
-    const displayMs = 1500;
+    const displayMs = 3000;
 
     m2Timer.style.transition = 'none';
     m2Timer.style.width = '100%';
@@ -703,7 +703,7 @@
       patternAnswer.forEach(i=> patternTiles[i].classList.remove('flash'));
       pickingEnabled = true;
       btnShowPattern.textContent = "Now click the 5 tiles you remember";
-    }, 1000);
+    }, 500);
   });
 
   btnSubmitPattern.addEventListener('click', ()=>{
