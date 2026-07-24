@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cognitive Drift — Screen Time vs. Cognitive Performance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5F8F6;
+    --ink:#12241F;
+    --ink-soft:#4B5F58;
+    --forest:#114B4C;
+    --forest-dark:#0B3435;
+    --teal:#2E9CA6;
+    --sage:#8FBFA3;
+    --sage-light:#E4F1E8;
+    --amber:#F2A541;
+    --signal-red:#E85C4A;
+    --signal-green:#3FAE6B;
+    --border:#D8E6DE;
+    --card:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  /* ---------- Header ---------- */
+  .topbar{
+    background:linear-gradient(135deg,var(--forest-dark),var(--forest) 70%);
+    color:#EFF7F2;
+    padding:22px clamp(16px,4vw,48px);
+    position:relative;
+    overflow:hidden;
+  }
+  .topbar-inner{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .brand-tag{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--sage);border:1px solid rgba(143,191,163,.4);
+    padding:4px 10px;border-radius:999px;
+  }
+  .brand-tag .dot{width:6px;height:6px;border-radius:50%;background:var(--signal-green);box-shadow:0 0 0 3px rgba(63,174,107,.25);}
+  .topbar h1{font-size:clamp(22px,3vw,32px);margin:6px 0 2px;font-weight:700;letter-spacing:-.01em;}
+  .topbar p{margin:0;color:#C7DED3;font-size:14px;}
+  .team-chip{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
+    border-radius:12px;padding:10px 16px;font-size:13px;color:#DCEDE4;text-align:right;
+  }
+  .team-chip b{display:block;color:#fff;font-size:14px;font-family:'Space Grotesk',sans-serif;}
+
+  /* animated cognitive pulse line behind header */
+  .pulse-wrap{position:absolute;inset:0;opacity:.35;z-index:1;pointer-events:none;}
+  .pulse-line{stroke:var(--sage);stroke-width:1.6;fill:none;stroke-dasharray:6 5;animation:drift 6s linear infinite;}
+  .pulse-line.b{stroke:var(--teal);stroke-width:1.2;opacity:.6;animation-duration:9s;animation-direction:reverse;}
+  @keyframes drift{to{stroke-dashoffset:-220;}}
+
+  /* ---------- Shell / Layout ---------- */
+  .shell{
+    max-width:1180px;margin:0 auto;padding:clamp(16px,3vw,32px);
+    display:grid;grid-template-columns:220px 1fr;gap:24px;
+  }
+  @media (max-width:840px){ .shell{grid-template-columns:1fr;} }
+
+  /* protocol rail */
+  .rail{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 14px;height:fit-content;}
+  .rail-title{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);padding:0 6px 12px;}
+  .step{
+    display:flex;gap:12px;align-items:flex-start;padding:10px 6px;border-radius:10px;position:relative;
+  }
+  .step + .step{margin-top:2px;}
+  .step .num{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+    width:26px;height:26px;border-radius:50%;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    border:1.5px solid var(--border);color:var(--ink-soft);background:#fff;
+    transition:.25s;
+  }
+  .step .label{font-size:13.5px;color:var(--ink-soft);padding-top:4px;font-weight:500;transition:.25s;}
+  .step.active .num{background:var(--forest);border-color:var(--forest);color:#fff;box-shadow:0 0 0 4px var(--sage-light);}
+  .step.active .label{color:var(--forest);font-weight:700;}
+  .step.done .num{background:var(--signal-green);border-color:var(--signal-green);color:#fff;}
+  .step.done .label{color:var(--ink);}
+  .rail-line{position:absolute;left:19px;top:36px;width:2px;height:calc(100% - 26px);background:var(--border);z-index:0;}
+  .step:last-child .rail-line{display:none;}
+
+  @media (max-width:840px){
+    .rail{display:flex;overflow-x:auto;gap:4px;padding:12px;}
+    .rail-title{display:none;}
+    .step{flex-direction:column;align-items:center;min-width:78px;text-align:center;}
+    .rail-line{display:none;}
+    .step .label{font-size:11px;padding-top:2px;}
+  }
+
+  /* stage card */
+  .stage{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:clamp(20px,4vw,40px);min-height:520px;}
+  .screen{display:none;animation:fadein .4s ease;}
+  .screen.active{display:block;}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  .eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);font-weight:700;margin:0 0 6px;}
+  .stage h2{font-size:clamp(20px,2.6vw,28px);margin:0 0 10px;}
+  .instructions{
+    background:var(--sage-light);border:1px solid var(--border);border-left:4px solid var(--teal);
+    border-radius:10px;padding:14px 16px;font-size:14px;color:var(--ink-soft);line-height:1.55;margin:14px 0 24px;
+  }
+  .instructions b{color:var(--ink);}
+
+  label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin:16px 0 6px;}
+  input[type=text], select{
+    width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;
+    font-size:15px;font-family:'Inter',sans-serif;color:var(--ink);background:#FBFDFC;
+    outline:none;transition:.2s;
+  }
+  input[type=text]:focus, select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(46,156,166,.15);}
+  input.mono{font-family:'IBM Plex Mono',monospace;letter-spacing:.1em;font-size:20px;text-align:center;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--forest);color:#fff;border:none;border-radius:10px;
+    padding:13px 24px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+    transition:.2s;
+  }
+  .btn:hover{background:var(--forest-dark);transform:translateY(-1px);}
+  .btn:disabled{background:#B9C7C1;cursor:not-allowed;transform:none;}
+  .btn.secondary{background:#fff;color:var(--forest);border:1.5px solid var(--border);}
+  .btn.secondary:hover{border-color:var(--forest);background:var(--sage-light);}
+  .btn.amber{background:var(--amber);color:#3A2600;}
+  .btn.amber:hover{background:#DE9433;}
+  .btn-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;}
+
+  /* Reaction box */
+  .reaction-box{
+    height:260px;border-radius:16px;display:flex;align-items:center;justify-content:center;
+    background:var(--signal-red);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;
+    cursor:pointer;user-select:none;transition:background .15s;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05);
+  }
+  .reaction-box.go{background:var(--signal-green);}
+  .reaction-box.wait{background:#C9CFCC;color:#5A6A64;}
+  .trial-dots{display:flex;gap:8px;margin:14px 0;}
+  .trial-dots span{width:32px;height:8px;border-radius:5px;background:var(--border);}
+  .trial-dots span.filled{background:var(--teal);}
+
+  /* memory digits */
+  .digit-display{
+    font-family:'IBM Plex Mono',monospace;font-size:clamp(38px,7vw,56px);letter-spacing:.25em;
+    text-align:center;padding:34px 0;color:var(--forest);font-weight:600;
+  }
+  .timer-bar-track{height:6px;background:var(--border);border-radius:4px;overflow:hidden;margin:0 0 6px;}
+  .timer-bar-fill{height:100%;background:var(--teal);width:100%;transform-origin:left;}
+
+  /* pattern grid */
+  .pattern-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:340px;margin:0 auto;
+  }
+  .tile{
+    aspect-ratio:1/1;border-radius:14px;background:var(--sage-light);border:2px solid var(--border);
+    cursor:pointer;transition:.15s;
+  }
+  .tile.flash{background:var(--teal);border-color:var(--teal);}
+  .tile.picked{background:var(--forest);border-color:var(--forest-dark);}
+  .tile.correct{background:var(--signal-green);border-color:#2E8B57;}
+  .tile.wrong{background:var(--signal-red);border-color:#C9432F;}
+
+  /* notification popups (distraction) */
+  #distraction-layer{position:fixed;top:16px;right:16px;z-index:50;display:flex;flex-direction:column;gap:10px;pointer-events:none;}
+  .notif{
+    background:#fff;border:1px solid var(--border);border-left:4px solid var(--amber);
+    border-radius:10px;padding:10px 14px;box-shadow:0 8px 24px rgba(17,75,76,.15);
+    font-size:13px;min-width:210px;animation:popin .25s ease, popout .3s ease 2.2s forwards;
+  }
+  @keyframes popin{from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:translateX(0);}}
+  @keyframes popout{to{opacity:0;transform:translateX(30px);}}
+  .notif b{display:block;color:var(--forest);font-size:13px;}
+
+  /* results */
+  .score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:22px 0;}
+  @media (max-width:700px){.score-grid{grid-template-columns:1fr;}}
+  .score-card{background:var(--sage-light);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;}
+  .score-card .val{font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:600;color:var(--forest);}
+  .score-card .lbl{font-size:12.5px;color:var(--ink-soft);margin-top:4px;font-weight:600;}
+
+  .compare-row{margin:14px 0 22px;}
+  .compare-label{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-soft);margin-bottom:6px;font-weight:600;}
+  .compare-track{position:relative;height:22px;background:var(--sage-light);border-radius:8px;overflow:hidden;border:1px solid var(--border);}
+  .compare-fill{position:absolute;left:0;top:0;bottom:0;border-radius:8px 0 0 8px;transition:width .8s ease;}
+  .compare-fill.you{background:var(--forest);z-index:2;opacity:.9;}
+  .compare-fill.avg{background:var(--teal);opacity:.35;z-index:1;}
+  .compare-legend{display:flex;gap:16px;font-size:12px;color:var(--ink-soft);margin-top:4px;}
+  .compare-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend-dot{width:9px;height:9px;border-radius:3px;}
+
+  .sync-note{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);margin-top:18px;}
+  .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--signal-green);box-shadow:0 0 0 3px rgba(63,174,107,.2);}
+
+  footer{text-align:center;font-size:12px;color:var(--ink-soft);padding:28px 16px 40px;}
+</style>
+</head>
+<body>
+
+<div id="distraction-layer"></div>
+
+<header class="topbar">
+  <div class="pulse-wrap">
+    <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 800 120">
+      <polyline class="pulse-line" points="0,60 60,60 80,20 100,100 120,60 300,60 320,30 340,90 360,60 800,60"/>
+      <polyline class="pulse-line b" points="0,80 120,80 140,50 160,100 180,80 500,80 520,55 540,95 560,80 800,80"/>
+    </svg>
+  </div>
+  <div class="topbar-inner">
+    <div>
+      <span class="brand-tag"><span class="dot"></span> Live Exhibition Demo</span>
+      <h1>Cognitive Drift</h1>
+      <p>Screen Time vs. Cognitive Performance — a live testing station</p>
+    </div>
+    <div class="team-chip"><b>Team Neurobyte</b> Science Exhibition 2026</div>
+  </div>
+</header>
+
+<div class="shell">
+
+  <!-- PROTOCOL RAIL -->
+  <nav class="rail">
+    <div class="rail-title">Test Protocol</div>
+    <div class="step active" data-step="0"><div class="rail-line"></div><div class="num">01</div><div class="label">Participant Setup</div></div>
+    <div class="step" data-step="1"><div class="rail-line"></div><div class="num">02</div><div class="label">Reaction Baseline</div></div>
+    <div class="step" data-step="2"><div class="rail-line"></div><div class="num">03</div><div class="label">Dual-Task Memory</div></div>
+    <div class="step" data-step="3"><div class="rail-line"></div><div class="num">04</div><div class="label">Pattern Recall</div></div>
+    <div class="step" data-step="4"><div class="num">05</div><div class="label">Results</div></div>
+  </nav>
+
+  <!-- STAGE -->
+  <main class="stage">
+
+    <!-- SCREEN 0: WELCOME -->
+    <section class="screen active" id="screen-0">
+      <p class="eyebrow">Step 01 · Setup</p>
+      <h2>Welcome to the Cognitive Drift station</h2>
+      <div class="instructions">
+        <b>How this works:</b> you'll complete three short tests — a reaction check, a memory test with a distraction round, and a pattern recall game. It takes about 4 minutes. Enter your details below to begin.
+      </div>
+
+      <label for="pname">Name / Initials</label>
+      <input type="text" id="pname" placeholder="e.g. R.K.">
+
+      <label for="pgrade">Grade / Age</label>
+      <input type="text" id="pgrade" placeholder="e.g. Grade 10 or Age 15">
+
+      <label for="pscreen">Average Daily Screen Time</label>
+      <select id="pscreen">
+        <option value="<2">Less than 2 hrs</option>
+        <option value="2-4">2 – 4 hrs</option>
+        <option value="4+">More than 4 hrs</option>
+      </select>
+
+      <div class="btn-row">
+        <button class="btn" id="btn-start">Start Cognitive Test Suite →</button>
+      </div>
+    </section>
+
+    <!-- SCREEN 1: REACTION TEST -->
+    <section class="screen" id="screen-1">
+      <p class="eyebrow">Step 02 · Module 1</p>
+      <h2>Baseline Visual Reaction Test</h2>
+      <div class="instructions">
+        <b>Instructions:</b> the box below starts red. Wait for it to turn <b>green</b>, then click it as fast as you can. Clicking while it's still red restarts that trial. You'll do <b>3 trials</b>.
+      </div>
+
+      <div class="trial-dots" id="trial-dots">
+        <span></span><span></span><span></span>
+      </div>
+
+      <div class="reaction-box wait" id="reaction-box">Click "Begin Trial" to start</div>
+
+      <p style="margin-top:14px;font-size:14px;color:var(--ink-soft);" id="reaction-status">Trial 1 of 3</p>
+
+      <div class="btn-row">
+        <button class="btn" id="btn-begin-trial">Begin Trial</button>
+        <button class="btn secondary" id="btn-to-module2" disabled>Continue to Module 2 →</button>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: DUAL-TASK -->
+    <section class="screen" id="screen-2">
+      <p class="eyebrow">Step 03 · Module 2 — Live Exhibition Feature</p>
+      <h2>Dual-Task Interference Test</h2>
+      <div class="instructions" id="m2-instructions">
+        <b>Round A — Focused Memory:</b> a 5-digit number will appear for 3 seconds. Memorize it, then type it back exactly. No distractions this round.
+      </div>
+
+      <div class="timer-bar-track"><div class="timer-bar-fill" id="m2-timer"></div></div>
+      <div class="digit-display" id="m2-digits">— — — — —</div>
+
+      <div id="m2-input-wrap" style="display:none;">
+        <label for="m2-input">Type the sequence you saw</label>
+        <input type="text" class="mono" id="m2-input" maxlength="5" placeholder="00000">
+        <div class="btn-row"><button class="btn" id="m2-submit">Submit Answer</button></div>
+      </div>
+
+      <div class="btn-row" id="m2-start-row">
+        <button class="btn" id="m2-start-round">Start Round A</button>
+      </div>
+
+      <div id="m2-result" style="margin-top:16px;font-size:14px;color:var(--ink-soft);"></div>
+      <button class="btn secondary" id="btn-to-module3" style="display:none;margin-top:14px;">Continue to Module 3 →</button>
+    </section>
+
+    <!-- SCREEN 3: PATTERN RECALL -->
+    <section class="screen" id="screen-3">
+      <p class="eyebrow">Step 04 · Module 3</p>
+      <h2>Short-Term Pattern Recall</h2>
+      <div class="instructions">
+        <b>Instructions:</b> watch the grid — 4 tiles will flash teal for 2 seconds. Once they turn back to normal, click the 4 tiles you remember. Then submit to see your accuracy.
+      </div>
+
+      <div class="pattern-grid" id="pattern-grid"></div>
+
+      <div class="btn-row">
+        <button class="btn" id="btn-show-pattern">Show Pattern</button>
+        <button class="btn secondary" id="btn-submit-pattern" disabled>Submit Selection</button>
+      </div>
+      <div id="pattern-result" style="margin-top:14px;font-size:14px;color:var(--ink-soft);"></div>
+      <button class="btn secondary" id="btn-to-results" style="display:none;margin-top:14px;">See My Results →</button>
+    </section>
+
+    <!-- SCREEN 4: RESULTS -->
+    <section class="screen" id="screen-4">
+      <p class="eyebrow">Step 05 · Dashboard</p>
+      <h2 id="results-heading">Your Cognitive Snapshot</h2>
+      <div class="instructions">
+        Here's how you performed across all three tests, compared with the average for participants who report similar daily screen time.
+      </div>
+
+      <div class="score-grid">
+        <div class="score-card"><div class="val" id="r-reaction">–</div><div class="lbl">Avg Reaction Time (ms)</div></div>
+        <div class="score-card"><div class="val" id="r-drop">–</div><div class="lbl">Distraction Degradation</div></div>
+        <div class="score-card"><div class="val" id="r-memory">–</div><div class="lbl">Pattern Memory Score</div></div>
+      </div>
+
+      <h3 style="font-size:16px;margin:26px 0 4px;">How you compare to your screen-time group</h3>
+      <div id="compare-wrap"></div>
+
+      <div class="sync-note"><span class="sync-dot"></span> <span id="sync-text">Submitting your results to the exhibition dashboard…</span></div>
+
+      <div class="btn-row">
+        <button class="btn" id="btn-reset">Take Test Again / Next Participant</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>Cognitive Drift · Built for classroom & exhibition use · Results are for educational demonstration, not clinical diagnosis.</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ STATE ============ */
+  const state = {
+    name:"", grade:"", screenTime:"2-4",
+    reactionTimes:[],
+    m2AccuracyA:null, m2AccuracyB:null, distractionDrop:null,
+    memoryScore:null
+  };
+
+  const RAIL_STEPS = document.querySelectorAll('.step');
+  const SCREENS = document.querySelectorAll('.screen');
+
+  function goTo(stepIndex){
+    SCREENS.forEach((s,i)=> s.classList.toggle('active', i===stepIndex));
+    RAIL_STEPS.forEach((s,i)=>{
+      s.classList.toggle('active', i===stepIndex);
+      s.classList.toggle('done', i<stepIndex);
+    });
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  /* ============ WEBHOOK / DATA SUBMISSION STUB ============ */
+  // Replace with your own Google Apps Script Web App or SheetDB endpoint.
+  const WEBHOOK_URL = "https://sheetdb.io/api/v1/hc6vl7w6s1vfh";
+
+  async function submitResults(payload){
+    const syncText = document.getElementById('sync-text');
+    try{
+      // SheetDB requires the row data to be wrapped inside a "data" object.
+      const response = await fetch(WEBHOOK_URL, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ data: [payload] })
+      });
+      if(!response.ok){
+        const errText = await response.text();
+        throw new Error(`SheetDB responded with ${response.status}: ${errText}`);
+      }
+      syncText.textContent = "Results submitted to the exhibition dashboard ✓";
+    }catch(err){
+      console.error("Webhook submission failed:", err);
+      syncText.textContent = "Could not reach the dashboard — results kept locally for this device.";
+    }
+  }
+
+  /* ============================================================
+     SCREEN 0 — WELCOME / SETUP
+  ============================================================ */
+  document.getElementById('btn-start').addEventListener('click', ()=>{
+    const name = document.getElementById('pname').value.trim();
+    const grade = document.getElementById('pgrade').value.trim();
+    if(!name){ alert("Please enter your name or initials to begin."); return; }
+    state.name = name;
+    state.grade = grade || "—";
+    state.screenTime = document.getElementById('pscreen').value;
+    resetModule1();
+    goTo(1);
+  });
+
+  /* ============================================================
+     MODULE 1 — REACTION TEST
+  ============================================================ */
+  const reactionBox = document.getElementById('reaction-box');
+  const trialDots = document.querySelectorAll('#trial-dots span');
+  const reactionStatus = document.getElementById('reaction-status');
+  const btnBeginTrial = document.getElementById('btn-begin-trial');
+  const btnToModule2 = document.getElementById('btn-to-module2');
+
+  let trialTimeout=null, trialStartTime=null, trialState='idle'; // idle | waiting | go
+
+  function resetModule1(){
+    state.reactionTimes = [];
+    trialDots.forEach(d=>d.classList.remove('filled'));
+    reactionStatus.textContent = "Trial 1 of 3";
+    reactionBox.className = "reaction-box wait";
+    reactionBox.textContent = 'Click "Begin Trial" to start';
+    btnBeginTrial.disabled = false;
+    btnBeginTrial.textContent = "Begin Trial";
+    btnToModule2.disabled = true;
+    trialState = 'idle';
+  }
+
+  btnBeginTrial.addEventListener('click', ()=>{
+    if(state.reactionTimes.length >= 3) return;
+    btnBeginTrial.disabled = true;
+    reactionBox.className = "reaction-box";
+    reactionBox.textContent = "Wait for green…";
+    trialState = 'waiting';
+    const delay = 2000 + Math.random()*3000;
+    trialTimeout = setTimeout(()=>{
+      reactionBox.className = "reaction-box go";
+      reactionBox.textContent = "CLICK NOW!";
+      trialStartTime = performance.now();
+      trialState = 'go';
+    }, delay);
+  });
+
+  reactionBox.addEventListener('click', ()=>{
+    if(trialState === 'waiting'){
+      clearTimeout(trialTimeout);
+      reactionBox.className = "reaction-box wait";
+      reactionBox.textContent = "Too soon! Click Begin Trial to retry.";
+      trialState = 'idle';
+      btnBeginTrial.disabled = false;
+      return;
+    }
+    if(trialState === 'go'){
+      const rt = Math.round(performance.now() - trialStartTime);
+      state.reactionTimes.push(rt);
+      trialDots[state.reactionTimes.length-1].classList.add('filled');
+      trialState = 'idle';
+      reactionBox.className = "reaction-box wait";
+
+      if(state.reactionTimes.length < 3){
+        reactionBox.textContent = `Trial ${state.reactionTimes.length} recorded: ${rt} ms`;
+        reactionStatus.textContent = `Trial ${state.reactionTimes.length+1} of 3`;
+        btnBeginTrial.disabled = false;
+      } else {
+        const avg = Math.round(state.reactionTimes.reduce((a,b)=>a+b,0)/3);
+        reactionBox.textContent = `Done! Average reaction time: ${avg} ms`;
+        reactionStatus.textContent = "All 3 trials complete";
+        btnBeginTrial.disabled = true;
+        btnBeginTrial.textContent = "Complete";
+        btnToModule2.disabled = false;
+      }
+    }
+  });
+
+  btnToModule2.addEventListener('click', ()=>{
+    resetModule2();
+    goTo(2);
+  });
+
+  /* ============================================================
+     MODULE 2 — DUAL-TASK INTERFERENCE TEST
+  ============================================================ */
+  const m2Instructions = document.getElementById('m2-instructions');
+  const m2Digits = document.getElementById('m2-digits');
+  const m2Timer = document.getElementById('m2-timer');
+  const m2InputWrap = document.getElementById('m2-input-wrap');
+  const m2Input = document.getElementById('m2-input');
+  const m2Submit = document.getElementById('m2-submit');
+  const m2StartRow = document.getElementById('m2-start-row');
+  const m2StartBtn = document.getElementById('m2-start-round');
+  const m2Result = document.getElementById('m2-result');
+  const btnToModule3 = document.getElementById('btn-to-module3');
+  const distractionLayer = document.getElementById('distraction-layer');
+
+  let m2Round = 'A'; // A then B
+  let m2CurrentSequence = "";
+  let m2DistractionTimers = [];
+
+  function resetModule2(){
+    m2Round = 'A';
+    state.m2AccuracyA = null; state.m2AccuracyB = null; state.distractionDrop = null;
+    m2Instructions.innerHTML = "<b>Round A — Focused Memory:</b> a 5-digit number will appear for 3 seconds. Memorize it, then type it back exactly. No distractions this round.";
+    m2Digits.textContent = "— — — — —";
+    m2Timer.style.transition = 'none';
+    m2Timer.style.width = '100%';
+    m2InputWrap.style.display = 'none';
+    m2Result.textContent = '';
+    m2StartRow.style.display = 'flex';
+    m2StartBtn.textContent = "Start Round A";
+    btnToModule3.style.display = 'none';
+  }
+
+  function genDigits(){
+    let s = "";
+    for(let i=0;i<5;i++) s += Math.floor(Math.random()*10);
+    return s;
+  }
+
+  function playBeep(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+      osc.onended = ()=> ctx.close();
+    }catch(e){ /* audio not available, fail silently */ }
+  }
+
+  const NOTIF_MESSAGES = [
+    {title:"New Message", body:"Hey, are you free later?"},
+    {title:"Battery Low", body:"15% remaining — plug in soon."},
+    {title:"App Update", body:"A new update is ready to install."},
+    {title:"Reminder", body:"Team meeting in 10 minutes."},
+    {title:"Missed Call", body:"You have 1 missed call."}
+  ];
+
+  function spawnNotification(){
+    const msg = NOTIF_MESSAGES[Math.floor(Math.random()*NOTIF_MESSAGES.length)];
+    const el = document.createElement('div');
+    el.className = 'notif';
+    el.innerHTML = `<b>${msg.title}</b>${msg.body}`;
+    distractionLayer.appendChild(el);
+    playBeep();
+    setTimeout(()=> el.remove(), 2600);
+  }
+
+  m2StartBtn.addEventListener('click', ()=>{
+    m2CurrentSequence = genDigits();
+    m2StartRow.style.display = 'none';
+    m2Digits.textContent = m2CurrentSequence.split('').join(' ');
+    m2Timer.style.transition = 'none';
+    m2Timer.style.width = '100%';
+    requestAnimationFrame(()=>{
+      m2Timer.style.transition = 'width 3s linear';
+      m2Timer.style.width = '0%';
+    });
+
+    if(m2Round === 'B'){
+      // fire distraction popups + sounds through the 3s display window
+      spawnNotification();
+      m2DistractionTimers.push(setTimeout(spawnNotification, 800));
+      m2DistractionTimers.push(setTimeout(spawnNotification, 1700));
+      m2DistractionTimers.push(setTimeout(spawnNotification, 2500));
+    }
+
+    setTimeout(()=>{
+      m2Digits.textContent = "— — — — —";
+      m2InputWrap.style.display = 'block';
+      m2Input.value = '';
+      m2Input.focus();
+    }, 3000);
+  });
+
+  m2Submit.addEventListener('click', ()=>{
+    const answer = m2Input.value.trim();
+    let correct = 0;
+    for(let i=0;i<5;i++){ if(answer[i] === m2CurrentSequence[i]) correct++; }
+    const accuracy = Math.round((correct/5)*100);
+
+    if(m2Round === 'A'){
+      state.m2AccuracyA = accuracy;
+      m2Result.innerHTML = `Round A accuracy: <b>${accuracy}%</b> (${correct}/5 digits correct).`;
+      m2InputWrap.style.display = 'none';
+      m2Round = 'B';
+      m2Instructions.innerHTML = "<b>Round B — Distracted Memory:</b> another 5-digit number will appear for 3 seconds — but this time notification pop-ups and alert sounds will fire while you're trying to memorize it. Do your best!";
+      m2StartRow.style.display = 'flex';
+      m2StartBtn.textContent = "Start Round B (with distractions)";
+      m2StartBtn.className = "btn amber";
+    } else {
+      state.m2AccuracyB = accuracy;
+      const dropRaw = state.m2AccuracyA > 0
+        ? ((state.m2AccuracyA - state.m2AccuracyB) / state.m2AccuracyA) * 100
+        : 0;
+      state.distractionDrop = Math.max(0, Math.round(dropRaw));
+      m2Result.innerHTML = `Round A: <b>${state.m2AccuracyA}%</b> · Round B: <b>${state.m2AccuracyB}%</b><br>
+        Distraction Degradation: <b>${state.distractionDrop}%</b> performance drop.`;
+      btnToModule3.style.display = 'inline-flex';
+      m2DistractionTimers.forEach(clearTimeout);
+    }
+  });
+
+  btnToModule3.addEventListener('click', ()=>{
+    resetModule3();
+    goTo(3);
+  });
+
+  /* ============================================================
+     MODULE 3 — SHORT-TERM PATTERN RECALL
+  ============================================================ */
+  const patternGrid = document.getElementById('pattern-grid');
+  const btnShowPattern = document.getElementById('btn-show-pattern');
+  const btnSubmitPattern = document.getElementById('btn-submit-pattern');
+  const patternResult = document.getElementById('pattern-result');
+  const btnToResults = document.getElementById('btn-to-results');
+
+  let patternTiles = [];
+  let patternAnswer = [];
+  let userPicks = [];
+  let pickingEnabled = false;
+
+  function resetModule3(){
+    patternGrid.innerHTML = '';
+    patternTiles = [];
+    userPicks = [];
+    pickingEnabled = false;
+    patternResult.textContent = '';
+    btnShowPattern.disabled = false;
+    btnShowPattern.textContent = "Show Pattern";
+    btnSubmitPattern.disabled = true;
+    btnToResults.style.display = 'none';
+
+    for(let i=0;i<9;i++){
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.dataset.index = i;
+      tile.addEventListener('click', ()=> onTileClick(i, tile));
+      patternGrid.appendChild(tile);
+      patternTiles.push(tile);
+    }
+  }
+
+  function onTileClick(index, tile){
+    if(!pickingEnabled) return;
+    if(userPicks.includes(index)){
+      userPicks = userPicks.filter(p=>p!==index);
+      tile.classList.remove('picked');
+    } else {
+      if(userPicks.length >= 4) return;
+      userPicks.push(index);
+      tile.classList.add('picked');
+    }
+    btnSubmitPattern.disabled = userPicks.length !== 4;
+  }
+
+  btnShowPattern.addEventListener('click', ()=>{
+    btnShowPattern.disabled = true;
+    // choose 4 unique random tiles
+    const pool = [0,1,2,3,4,5,6,7,8];
+    patternAnswer = [];
+    for(let i=0;i<4;i++){
+      const idx = Math.floor(Math.random()*pool.length);
+      patternAnswer.push(pool.splice(idx,1)[0]);
+    }
+    patternAnswer.forEach(i=> patternTiles[i].classList.add('flash'));
+    btnShowPattern.textContent = "Memorize…";
+
+    setTimeout(()=>{
+      patternAnswer.forEach(i=> patternTiles[i].classList.remove('flash'));
+      pickingEnabled = true;
+      btnShowPattern.textContent = "Now click the 4 tiles you remember";
+    }, 2000);
+  });
+
+  btnSubmitPattern.addEventListener('click', ()=>{
+    pickingEnabled = false;
+    let correctCount = 0;
+    patternTiles.forEach((tile, i)=>{
+      const wasAnswer = patternAnswer.includes(i);
+      const wasPicked = userPicks.includes(i);
+      if(wasPicked && wasAnswer){ tile.classList.add('correct'); correctCount++; }
+      else if(wasPicked && !wasAnswer){ tile.classList.add('wrong'); }
+      else if(!wasPicked && wasAnswer){ tile.classList.add('correct'); }
+    });
+    const score = Math.round((correctCount/4)*100);
+    state.memoryScore = score;
+    patternResult.innerHTML = `You correctly recalled <b>${correctCount} of 4</b> tiles — accuracy score: <b>${score}%</b>.`;
+    btnSubmitPattern.disabled = true;
+    btnToResults.style.display = 'inline-flex';
+  });
+
+  btnToResults.addEventListener('click', ()=>{
+    showResults();
+    goTo(4);
+  });
+
+  /* ============================================================
+     RESULTS DASHBOARD
+  ============================================================ */
+  const BENCHMARKS = {
+    "<2":  { reaction: 320, drop: 15, memory: 78 },
+    "2-4": { reaction: 380, drop: 28, memory: 65 },
+    "4+":  { reaction: 460, drop: 42, memory: 52 }
+  };
+  const SCREEN_LABEL = { "<2":"under 2 hrs/day", "2-4":"2–4 hrs/day", "4+":"4+ hrs/day" };
+
+  function compareBar(label, youVal, avgVal, maxVal, unit){
+    const youPct = Math.min(100, (youVal/maxVal)*100);
+    const avgPct = Math.min(100, (avgVal/maxVal)*100);
+    return `
+      <div class="compare-row">
+        <div class="compare-label"><span>${label}</span><span>You: ${youVal}${unit} · Group avg: ${avgVal}${unit}</span></div>
+        <div class="compare-track">
+          <div class="compare-fill avg" style="width:${avgPct}%"></div>
+          <div class="compare-fill you" style="width:${youPct}%"></div>
+        </div>
+      </div>`;
+  }
+
+  function showResults(){
+    document.getElementById('results-heading').textContent = `${state.name}'s Cognitive Snapshot`;
+
+    const avgReaction = Math.round(state.reactionTimes.reduce((a,b)=>a+b,0)/state.reactionTimes.length);
+    document.getElementById('r-reaction').textContent = avgReaction;
+    document.getElementById('r-drop').textContent = state.distractionDrop + '%';
+    document.getElementById('r-memory').textContent = state.memoryScore + '%';
+
+    const bench = BENCHMARKS[state.screenTime];
+    document.getElementById('compare-wrap').innerHTML =
+      compareBar('Reaction Time (lower is better)', avgReaction, bench.reaction, 600, ' ms') +
+      compareBar('Distraction Degradation (lower is better)', state.distractionDrop, bench.drop, 60, '%') +
+      compareBar(`Memory Pattern Score — vs. participants at ${SCREEN_LABEL[state.screenTime]}`, state.memoryScore, bench.memory, 100, '%') +
+      `<div class="compare-legend">
+        <span><span class="legend-dot" style="background:var(--forest)"></span>You</span>
+        <span><span class="legend-dot" style="background:var(--teal);opacity:.5"></span>Group average</span>
+      </div>`;
+
+    const payload = {
+      name: state.name,
+      grade: state.grade,
+      screenTime: state.screenTime,
+      avgReactionTime: avgReaction,
+      distractionDrop: state.distractionDrop,
+      memoryScore: state.memoryScore,
+      timestamp: new Date().toISOString()
+    };
+    submitResults(payload);
+  }
+
+  /* ============================================================
+     RESET / NEXT PARTICIPANT
+  ============================================================ */
+  document.getElementById('btn-reset').addEventListener('click', ()=>{
+    document.getElementById('pname').value = '';
+    document.getElementById('pgrade').value = '';
+    document.getElementById('pscreen').value = '2-4';
+    resetModule1();
+    resetModule2();
+    resetModule3();
+    m2StartBtn.className = "btn";
+    goTo(0);
+  });
+
+})();
+</script>
+</body>
+</html>
