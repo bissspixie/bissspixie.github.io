@@ -204,6 +204,13 @@
   .sync-note{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);margin-top:18px;}
   .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--signal-green);box-shadow:0 0 0 3px rgba(63,174,107,.2);}
 
+  .tips-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:14px 0 6px;}
+  @media (max-width:700px){.tips-grid{grid-template-columns:1fr;}}
+  .tip-card{background:var(--sage-light);border:1px solid var(--border);border-radius:14px;padding:16px 18px;}
+  .tip-card-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14.5px;color:var(--forest);margin-bottom:8px;}
+  .tip-card ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-soft);line-height:1.6;}
+  .tip-card li + li{margin-top:6px;}
+
   footer{text-align:center;font-size:12px;color:var(--ink-soft);padding:28px 16px 40px;}
 </style>
 </head>
@@ -351,6 +358,8 @@
       <h3 style="font-size:16px;margin:26px 0 4px;">How you compare to your screen-time group</h3>
       <div id="compare-wrap"></div>
 
+      <div id="tips-wrap"></div>
+
       <div class="sync-note"><span class="sync-dot"></span> <span id="sync-text">Submitting your results to the exhibition dashboard…</span></div>
 
       <div class="btn-row">
@@ -387,7 +396,7 @@
     window.scrollTo({top:0, behavior:'smooth'});
   }
 
-  /* ============ WEBHOOK / DATA SUBMISSION STUB ============ */
+   /* ============ WEBHOOK / DATA SUBMISSION STUB ============ */
   // Replace with your own Google Apps Script Web App or SheetDB endpoint.
   const WEBHOOK_URL = "https://sheetdb.io/api/v1/hc6vl7w6s1vfh";
 
@@ -410,7 +419,6 @@
       syncText.textContent = "Could not reach the dashboard — results kept locally for this device.";
     }
   }
-
   /* ============================================================
      SCREEN 0 — WELCOME / SETUP
   ============================================================ */
@@ -768,6 +776,36 @@
         <span><span class="legend-dot" style="background:var(--forest)"></span>You</span>
         <span><span class="legend-dot" style="background:var(--teal);opacity:.5"></span>Group average</span>
       </div>`;
+
+    const tipsWrap = document.getElementById('tips-wrap');
+    if(state.screenTime === "4+"){
+      tipsWrap.innerHTML = `
+        <h3 style="font-size:16px;margin:26px 0 4px;">Ways to reduce screen time</h3>
+        <div class="tips-grid">
+          <div class="tip-card">
+            <div class="tip-card-title">🎓 If you're studying online</div>
+            <ul>
+              <li>Download lecture slides or recordings instead of re-streaming them every time you review.</li>
+              <li>Take notes by hand during online classes instead of typing — it also helps you remember more.</li>
+              <li>Work in focused blocks (e.g. 45 min on, 10 min off) instead of leaving tabs open all day.</li>
+              <li>Turn off notifications during online classes so you're not pulled into other apps.</li>
+              <li>Use audio-only mode for lectures you can just listen to, and get up and move while you do.</li>
+            </ul>
+          </div>
+          <div class="tip-card">
+            <div class="tip-card-title">💼 If you work on a computer all day</div>
+            <ul>
+              <li>Follow the 20-20-20 rule: every 20 minutes, look at something 20 feet away for 20 seconds.</li>
+              <li>Build short screen-free breaks between meetings instead of stacking them back-to-back.</li>
+              <li>Batch-check email and chat apps at set times instead of leaving notifications on all day.</li>
+              <li>Write down your task list on paper instead of keeping it only in a browser tab.</li>
+              <li>Step away from the screen for lunch — eating at your desk keeps the clock running.</li>
+            </ul>
+          </div>
+        </div>`;
+    } else {
+      tipsWrap.innerHTML = '';
+    }
 
     const payload = {
       name: state.name,
